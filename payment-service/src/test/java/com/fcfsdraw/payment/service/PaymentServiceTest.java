@@ -4,10 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fcfsdraw.common.exception.BusinessException;
+import com.fcfsdraw.common.exception.ErrorCode;
 import com.fcfsdraw.payment.dto.PaymentResponse;
 import com.fcfsdraw.payment.repository.PaymentTransactionRepository;
-import com.fcfsdraw.wallet.repository.WalletRepository;
 import com.fcfsdraw.wallet.dto.WalletResponse;
+import com.fcfsdraw.wallet.repository.WalletRepository;
 import com.fcfsdraw.wallet.service.WalletService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,17 +21,23 @@ class PaymentServiceTest {
     private static final Long USER_ID = 1L;
     private static final long INITIAL_BALANCE = 10_000L;
 
-    @Autowired
-    private PaymentService paymentService;
+    private final PaymentService paymentService;
+    private final WalletService walletService;
+    private final PaymentTransactionRepository paymentTransactionRepository;
+    private final WalletRepository walletRepository;
 
     @Autowired
-    private WalletService walletService;
-
-    @Autowired
-    private PaymentTransactionRepository paymentTransactionRepository;
-
-    @Autowired
-    private WalletRepository walletRepository;
+    PaymentServiceTest(
+            PaymentService paymentService,
+            WalletService walletService,
+            PaymentTransactionRepository paymentTransactionRepository,
+            WalletRepository walletRepository
+    ) {
+        this.paymentService = paymentService;
+        this.walletService = walletService;
+        this.paymentTransactionRepository = paymentTransactionRepository;
+        this.walletRepository = walletRepository;
+    }
 
     @BeforeEach
     void setUp() {
@@ -76,6 +83,21 @@ class PaymentServiceTest {
         WalletResponse wallet = walletService.getBalance(3L);
         assertThat(repeated.remainingBalance()).isEqualTo(6_000L);
         assertThat(wallet.balance()).isEqualTo(6_000L);
+        assertThat(paymentTransactionRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    void pay_throwsExceptionWhenRepeatedRequestHasDifferentPayload() {
+        // given
+        walletService.setBalance(4L, INITIAL_BALANCE);
+        paymentService.pay("request-4", 4L, 4_000L);
+
+        // when, then
+        assertThatThrownBy(() -> paymentService.pay("request-4", 4L, 5_000L))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.errorCode()).isEqualTo(ErrorCode.IDEMPOTENCY_CONFLICT)
+                );
+        assertThat(walletService.getBalance(4L).balance()).isEqualTo(6_000L);
         assertThat(paymentTransactionRepository.findAll()).hasSize(1);
     }
 }

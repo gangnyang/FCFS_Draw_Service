@@ -46,4 +46,8 @@ public class PaymentTransaction extends BaseEntity {
         this.price = price;
         this.status = PaymentStatus.COMPLETED;
     }
+
+    public boolean hasSamePayment(Long userId, long price) {
+        return this.userId.equals(userId) && this.price == price;
+    }
 }
