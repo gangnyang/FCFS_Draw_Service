@@ -1,0 +1,15 @@
+.gradle/
+.omx/
+build/
+**/build/
+bin/
+**/bin/
+out/
+**/out/
+*.class
+
+.env
+application-local.yml
+
+.idea/
+*.iml
