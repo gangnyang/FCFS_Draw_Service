@@ -12,4 +12,5 @@ out/
 application-local.yml
 
 .idea/
+.vscode/
 *.iml
