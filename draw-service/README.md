@@ -14,5 +14,5 @@
 
 ## 현재 동시성 단계
 
-concurrency-guide의 Step 1에 맞춰 재고 차감에는 `@Lock`, `@Version`, Redis 원자 연산을 넣지 않았습니다.
-동시 요청에서 Lost Update 또는 oversell 현상을 관찰하기 위한 의도적인 무방비 상태입니다.
+concurrency-guide의 Step 3에 맞춰 상품 단위 Redisson 분산 락을 사용합니다.
+요청은 `product:{productId}` 락을 짧게 시도하고, 락 획득에 실패하면 빠르게 지연 응답을 반환합니다.

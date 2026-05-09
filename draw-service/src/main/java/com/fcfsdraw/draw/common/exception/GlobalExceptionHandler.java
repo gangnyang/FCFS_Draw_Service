@@ -8,18 +8,20 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.client.RedisConnectionException;
+import org.redisson.client.RedisTimeoutException;
 import org.slf4j.MDC;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.transaction.TransactionSystemException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -76,6 +78,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
+            ConcurrencyFailureException.class,
+            RedisConnectionException.class,
+            RedisTimeoutException.class,
             CannotAcquireLockException.class,
             PessimisticLockingFailureException.class,
             CannotCreateTransactionException.class,

@@ -80,3 +80,15 @@
 ### 3. 조치
 - Step 2 상세 변경 이력을 `log/draw-service/change-log-step2.md`로 분리했다.
 - 일반 변경 로그에는 분리 사실만 남겼다.
+
+## 2026-05-10 02:04:00 +09:00 - Step 3 Redisson 분산 락 적용 기록 분리
+
+### 1. 발생 상황
+- Step 3 Redisson 분산 락 적용 내역은 Step 2 비관적 락과 비교할 수 있도록 별도 변경 로그로 관리할 필요가 있다.
+
+### 2. 원인
+- DB row lock 기반 병목과 Redis 분산 락 기반 fail-fast 결과를 같은 일반 로그에 섞으면 단계별 판단 근거가 흐려진다.
+
+### 3. 조치
+- Step 3 상세 변경 이력을 `log/draw-service/change-log-step3.md`로 분리했다.
+- 일반 변경 로그에는 분리 사실만 남겼다.

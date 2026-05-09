@@ -4,8 +4,6 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      connection-init-sql: SET innodb_lock_wait_timeout=${DB_LOCK_WAIT_TIMEOUT_SECONDS:3}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -21,3 +19,7 @@ logging:
   charset:
     console: UTF-8
     file: UTF-8
+
+draw:
+  redis:
+    address: ${REDIS_ADDRESS}

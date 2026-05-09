@@ -13,8 +13,10 @@ import com.fcfsdraw.draw.product.repository.ProductRepository;
 import com.fcfsdraw.draw.product.service.ProductService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
 class DrawEntryServiceTest {
@@ -23,6 +25,9 @@ class DrawEntryServiceTest {
     private final ProductService productService;
     private final DrawEntryRepository drawEntryRepository;
     private final ProductRepository productRepository;
+
+    @MockitoBean
+    private RedissonClient redissonClient;
 
     @Autowired
     DrawEntryServiceTest(

@@ -50,8 +50,7 @@ public class DrawEntryService {
     }
 
     private DrawResponse createDraw(String requestId, Long productId, Long userId) {
-        // Step 2: 재고 차감 대상 상품은 트랜잭션 안에서 DB 배타락으로 조회한다.
-        Product product = productService.findByIdForUpdate(productId);
+        Product product = productService.findById(productId);
 
         if (!product.isDrawable()) {
             return DrawResponse.from(drawEntryRepository.saveAndFlush(

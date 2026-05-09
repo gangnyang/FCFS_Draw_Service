@@ -30,9 +30,4 @@ public class ProductService {
         return productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
     }
-
-    public Product findByIdForUpdate(Long productId) {
-        return productRepository.findWithPessimisticLockById(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-    }
 }
