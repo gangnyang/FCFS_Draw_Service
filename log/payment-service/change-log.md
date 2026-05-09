@@ -126,3 +126,27 @@
 - unique 제약 충돌이 서비스 메서드 내부에서 즉시 감지되도록 결제 기록 저장 시 `saveAndFlush`를 사용했다.
 - 같은 `requestId`에 다른 결제 정보가 들어오면 `IDEMPOTENCY_CONFLICT` 409 응답으로 실패 처리하도록 검증을 추가했다.
 - 테스트의 필드 `@Autowired` 주입을 제거하고 생성자 주입으로 변경했으며, payload 불일치 중복 요청 테스트를 추가했다.
+
+## 2026-05-09 18:35:00 KST - 예약 기반 결제 흐름 계획 기록
+
+### 1. 발생 상황
+- draw-service와 payment-service를 연계할 때 즉시 잔액 차감 방식은 분산 트랜잭션 실패 시 환불 또는 보상 처리가 필요하다.
+
+### 2. 원인
+- 선착순 재고 확정과 결제 확정이 서로 다른 서버에서 일어나기 때문에, 한쪽 성공 후 다른 한쪽이 실패하는 부분 성공 상태가 발생할 수 있다.
+
+### 3. 조치
+- 향후 구현할 reserve/capture/cancel/refund 기반 결제 흐름을 `log/payment-service/plan.md`에 계획으로 기록했다.
+- 현재 구현은 유지하고, draw-service 연계 또는 정합성 강화 단계에서 별도 작업으로 진행하도록 분리했다.
+
+## 2026-05-09 20:35:00 KST - 콘솔 로그 UTF-8 출력 설정 추가
+
+### 1. 발생 상황
+- Windows/VS Code 터미널 환경에서 서버 로그의 한글 메시지가 깨질 수 있다.
+
+### 2. 원인
+- JVM 표준 출력 인코딩, Gradle 실행 인코딩, Spring Boot logging charset이 터미널 인코딩과 다르면 한글 로그가 깨져 보인다.
+
+### 3. 조치
+- payment-service의 Java 컴파일, 테스트, bootRun JVM 인코딩을 UTF-8로 고정했다.
+- payment-service의 console/file logging charset을 UTF-8로 설정했다.
