@@ -1,16 +1,25 @@
 package com.fcfsdraw.draw.common.exception;
 
 import com.fcfsdraw.draw.common.response.ApiResponse;
+import jakarta.persistence.LockTimeoutException;
+import jakarta.persistence.PessimisticLockException;
+import jakarta.persistence.PersistenceException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.CannotCreateTransactionException;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -66,9 +75,41 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.failure(ErrorCode.NOT_FOUND.code(), new ErrorResponse(ErrorCode.NOT_FOUND.message(), currentTraceId())));
     }
 
+    @ExceptionHandler({
+            CannotAcquireLockException.class,
+            PessimisticLockingFailureException.class,
+            CannotCreateTransactionException.class,
+            QueryTimeoutException.class,
+            TransactionSystemException.class,
+            LockTimeoutException.class,
+            PessimisticLockException.class,
+            JpaSystemException.class,
+            PersistenceException.class
+    })
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleLockException(Exception exception) {
+        Throwable rootCause = rootCause(exception);
+        log.warn(
+                "lock acquisition delayed or failed. exceptionType={}, rootCauseType={}, message={}",
+                exception.getClass().getName(),
+                rootCause.getClass().getName(),
+                rootCause.getMessage()
+        );
+
+        return ResponseEntity.status(ErrorCode.LOCK_TIMEOUT.status())
+                .body(ApiResponse.failure(ErrorCode.LOCK_TIMEOUT.code(), new ErrorResponse(ErrorCode.LOCK_TIMEOUT.message(), currentTraceId())));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<ErrorResponse>> handleException(Exception exception, HttpServletRequest request) {
-        log.error("unhandled exception occurred. uri={}", request.getRequestURI(), exception);
+        Throwable rootCause = rootCause(exception);
+        log.error(
+                "unhandled exception occurred. uri={}, exceptionType={}, rootCauseType={}, rootCauseMessage={}",
+                request.getRequestURI(),
+                exception.getClass().getName(),
+                rootCause.getClass().getName(),
+                rootCause.getMessage(),
+                exception
+        );
 
         return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.status())
                 .body(ApiResponse.failure(
@@ -79,5 +120,13 @@ public class GlobalExceptionHandler {
 
     private String currentTraceId() {
         return Optional.ofNullable(MDC.get(TRACE_ID_KEY)).orElse("");
+    }
+
+    private Throwable rootCause(Throwable throwable) {
+        Throwable current = throwable;
+        while (current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        return current;
     }
 }
