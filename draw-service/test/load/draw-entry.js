@@ -85,7 +85,6 @@ function recordDrawResult(response, requestId, userId) {
     logFailure(`network error. requestId=${requestId}, userId=${userId}, error=${response.error}`);
     return;
   }
-
   try {
     const body = JSON.parse(response.body);
 
