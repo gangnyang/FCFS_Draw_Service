@@ -27,8 +27,5 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Prepare Gradle wrapper
-        run: chmod +x gradlew
-
       - name: Build and test all modules
-        run: ./gradlew clean build
+        run: java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain clean build
