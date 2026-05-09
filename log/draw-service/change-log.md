@@ -68,3 +68,15 @@
 - k6 스크립트에 `draw_win_count`, `draw_lose_count`, `draw_sold_out_count`, `draw_already_entered_count`, `draw_idempotency_conflict_count` 커스텀 카운터를 추가했다.
 - `LOG_REJECTIONS=true` 환경 변수를 주면 거절된 요청의 사유를 콘솔에 개별 출력하도록 했다.
 - HTTP 응답 성공률은 유지하고, 선착순 비즈니스 결과는 별도 지표로 확인하도록 분리했다.
+
+## 2026-05-09 21:10:00 KST - Step 2 비관적 락 적용 기록 분리
+
+### 1. 발생 상황
+- Step 2 비관적 락 적용 내역은 부하 테스트 단계별 비교를 위해 일반 변경 로그와 분리해서 관리할 필요가 있다.
+
+### 2. 원인
+- Step 1 무락 상태와 Step 2 비관적 락 상태를 비교하려면 단계별 원인, 조치, 검증 내용을 독립 문서로 추적하는 편이 명확하다.
+
+### 3. 조치
+- Step 2 상세 변경 이력을 `log/draw-service/change-log-step2.md`로 분리했다.
+- 일반 변경 로그에는 분리 사실만 남겼다.
