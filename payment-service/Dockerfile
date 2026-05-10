@@ -2,7 +2,7 @@ FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /workspace
 
 COPY . .
-RUN sed -i 's/\r$//' gradlew && sh ./gradlew :payment-service:bootJar
+RUN java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain :payment-service:bootJar
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
