@@ -16,10 +16,10 @@ class DrawQueueWorkerTest {
     private final DrawQueueWorker drawQueueWorker = new DrawQueueWorker(drawQueueService, drawPaymentSagaService);
 
     @Test
-    void consume_popsTopFiftyAndProcessesDrawSequentially() {
+    void consume_popsConfiguredBatchAndProcessesDrawSequentially() {
         // given
         when(drawQueueService.activeProductIds()).thenReturn(List.of(1L));
-        when(drawQueueService.popFirst(1L, 50)).thenReturn(List.of(
+        when(drawQueueService.popFirst(1L, 200)).thenReturn(List.of(
                 new DrawQueueItem(1L, 10L),
                 new DrawQueueItem(1L, 11L)
         ));
