@@ -7,6 +7,7 @@ import com.fcfsdraw.draw.common.exception.BusinessException;
 import com.fcfsdraw.draw.common.exception.ErrorCode;
 import com.fcfsdraw.draw.entry.domain.DrawFailReason;
 import com.fcfsdraw.draw.entry.domain.DrawResult;
+import com.fcfsdraw.draw.entry.domain.DrawStatus;
 import com.fcfsdraw.draw.entry.dto.DrawResponse;
 import com.fcfsdraw.draw.entry.repository.DrawEntryRepository;
 import com.fcfsdraw.draw.product.repository.ProductRepository;
@@ -49,7 +50,7 @@ class DrawEntryServiceTest {
     }
 
     @Test
-    void draw_returnsWinWhenStockRemains() {
+    void draw_reservesPendingPaymentWhenStockRemains() {
         // given
         Long productId = productService.create("ticket", 1L, 10_000L).productId();
 
@@ -58,6 +59,7 @@ class DrawEntryServiceTest {
 
         // then
         assertThat(response.result()).isEqualTo(DrawResult.WIN);
+        assertThat(response.status()).isEqualTo(DrawStatus.PENDING_PAYMENT);
         assertThat(productService.get(productId).remainingQuantity()).isZero();
     }
 
@@ -72,6 +74,7 @@ class DrawEntryServiceTest {
 
         // then
         assertThat(response.result()).isEqualTo(DrawResult.LOSE);
+        assertThat(response.status()).isEqualTo(DrawStatus.FAILED);
         assertThat(response.failReason()).isEqualTo(DrawFailReason.SOLD_OUT);
     }
 
@@ -86,6 +89,7 @@ class DrawEntryServiceTest {
 
         // then
         assertThat(repeated.result()).isEqualTo(DrawResult.WIN);
+        assertThat(repeated.status()).isEqualTo(DrawStatus.PENDING_PAYMENT);
         assertThat(productService.get(productId).remainingQuantity()).isEqualTo(1L);
         assertThat(drawEntryRepository.findAll()).hasSize(1);
     }
@@ -114,7 +118,37 @@ class DrawEntryServiceTest {
 
         // then
         assertThat(repeatedUser.result()).isEqualTo(DrawResult.WIN);
+        assertThat(repeatedUser.status()).isEqualTo(DrawStatus.PENDING_PAYMENT);
         assertThat(productService.get(productId).remainingQuantity()).isEqualTo(1L);
         assertThat(drawEntryRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    void completePayment_marksEntrySuccess() {
+        // given
+        Long productId = productService.create("ticket", 1L, 10_000L).productId();
+        drawEntryService.draw("draw-8", productId, 1L);
+
+        // when
+        DrawResponse response = drawEntryService.completePayment("draw-8");
+
+        // then
+        assertThat(response.status()).isEqualTo(DrawStatus.SUCCESS);
+        assertThat(productService.get(productId).remainingQuantity()).isZero();
+    }
+
+    @Test
+    void compensatePayment_marksEntryFailedAndRestoresStock() {
+        // given
+        Long productId = productService.create("ticket", 1L, 10_000L).productId();
+        drawEntryService.draw("draw-9", productId, 1L);
+
+        // when
+        DrawResponse response = drawEntryService.compensatePayment("draw-9");
+
+        // then
+        assertThat(response.status()).isEqualTo(DrawStatus.FAILED);
+        assertThat(response.failReason()).isEqualTo(DrawFailReason.PAYMENT_FAILED);
+        assertThat(productService.get(productId).remainingQuantity()).isEqualTo(1L);
     }
 }

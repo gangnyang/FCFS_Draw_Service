@@ -68,6 +68,13 @@ public class Product extends BaseEntity {
         markSoldOutIfNeeded();
     }
 
+    public void restoreRemainingQuantity() {
+        if (remainingQuantity < totalQuantity) {
+            remainingQuantity += 1;
+            status = ProductStatus.OPEN;
+        }
+    }
+
     private void markSoldOutIfNeeded() {
         if (remainingQuantity <= MINIMUM_QUANTITY) {
             status = ProductStatus.SOLD_OUT;

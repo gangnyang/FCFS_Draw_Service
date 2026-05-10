@@ -104,3 +104,29 @@
 ### 3. 조치
 - Step 4 상세 변경 이력을 `log/draw-service/change-log-step4.md`로 분리했다.
 - 일반 변경 로그에는 분리 사실만 남겼다.
+
+## 2026-05-10 14:21:20 +09:00 - Step 5 MSA 결제 연동 및 보상 트랜잭션 적용 기록 분리
+
+### 1. 발생 상황
+- Step 5 결제 연동과 보상 트랜잭션 적용 내역은 Redis 대기열 단계와 구분해 추적할 필요가 있다.
+
+### 2. 원인
+- Step 5는 큐 처리 구조 위에 외부 payment-service 호출과 Saga 트랜잭션 분리를 추가하므로 장애 지점과 복구 방식이 달라진다.
+
+### 3. 조치
+- Step 5 상세 변경 이력을 `log/draw-service/change-log-step5.md`로 분리했다.
+- 일반 변경 로그에는 분리 사실만 남겼다.
+
+## 2026-05-10 14:35:00 +09:00 - 로컬 부하 테스트 반복 절차 자동화
+
+### 1. 발생 상황
+- MySQL truncate, Redis 큐 초기화, 상품 생성, k6 실행, DB 결과 확인을 매 테스트마다 수동으로 반복해야 했다.
+
+### 2. 원인
+- Step 4 이후 부하 테스트는 k6 결과뿐 아니라 Redis 큐와 DB 처리 결과까지 함께 확인해야 해서 수동 절차가 길어졌다.
+
+### 3. 조치
+- `draw-service/test/load/run-draw-load-test.ps1`을 추가해 로컬 부하 테스트 준비와 결과 조회를 한 번에 수행하도록 했다.
+- draw DB(`fcfsdraw-mysql`), payment DB(`fcfspayment-mysql`), Redis(`fcfs-redis`) 컨테이너를 분리해서 초기화하도록 했다.
+- 요청 수를 1000, 2000, 3000 단계로 올리며 각 단계마다 draw 테이블, Redis 큐, payment 지갑/결제 이력을 초기화하도록 했다.
+- payment-service의 별도 user 테이블은 없으므로, `wallets.user_id` 기준으로 2000명 지갑 데이터를 생성하도록 했다.

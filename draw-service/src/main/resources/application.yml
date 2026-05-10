@@ -25,3 +25,5 @@ logging:
 draw:
   redis:
     address: ${REDIS_ADDRESS:redis://localhost:6379}
+  payment:
+    base-url: ${PAYMENT_BASE_URL:http://localhost:8080}

@@ -12,8 +12,8 @@ import org.mockito.InOrder;
 class DrawQueueWorkerTest {
 
     private final DrawQueueService drawQueueService = mock(DrawQueueService.class);
-    private final DrawEntryService drawEntryService = mock(DrawEntryService.class);
-    private final DrawQueueWorker drawQueueWorker = new DrawQueueWorker(drawQueueService, drawEntryService);
+    private final DrawPaymentSagaService drawPaymentSagaService = mock(DrawPaymentSagaService.class);
+    private final DrawQueueWorker drawQueueWorker = new DrawQueueWorker(drawQueueService, drawPaymentSagaService);
 
     @Test
     void consume_popsTopFiftyAndProcessesDrawSequentially() {
@@ -28,8 +28,8 @@ class DrawQueueWorkerTest {
         drawQueueWorker.consume();
 
         // then
-        InOrder inOrder = inOrder(drawEntryService);
-        inOrder.verify(drawEntryService).draw("queue-1-10", 1L, 10L);
-        inOrder.verify(drawEntryService).draw("queue-1-11", 1L, 11L);
+        InOrder inOrder = inOrder(drawPaymentSagaService);
+        inOrder.verify(drawPaymentSagaService).process("queue-1-10", 1L, 10L);
+        inOrder.verify(drawPaymentSagaService).process("queue-1-11", 1L, 11L);
     }
 }

@@ -13,12 +13,12 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "draw.queue.worker.enabled", havingValue = "true", matchIfMissing = true)
 public class DrawQueueWorker {
 
-    private static final int BATCH_SIZE = 50;
+    private static final int BATCH_SIZE = 200;
 
     private final DrawQueueService drawQueueService;
-    private final DrawEntryService drawEntryService;
+    private final DrawPaymentSagaService drawPaymentSagaService;
 
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(fixedDelay = 500)
     public void consume() {
         for (Long productId : drawQueueService.activeProductIds()) {
             processProductQueue(productId);
@@ -29,7 +29,7 @@ public class DrawQueueWorker {
         for (DrawQueueItem item : drawQueueService.popFirst(productId, BATCH_SIZE)) {
             String requestId = "queue-" + item.productId() + "-" + item.userId();
             try {
-                drawEntryService.draw(requestId, item.productId(), item.userId());
+                drawPaymentSagaService.process(requestId, item.productId(), item.userId());
             } catch (RuntimeException exception) {
                 log.warn("failed to process queued draw. productId={}, userId={}", item.productId(), item.userId(), exception);
             }

@@ -44,26 +44,48 @@ public class DrawEntry extends BaseEntity {
     private DrawResult result;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private DrawStatus status;
+
+    @Enumerated(EnumType.STRING)
     @Column(length = 50)
     private DrawFailReason failReason;
 
-    public DrawEntry(String requestId, Long productId, Long userId, DrawResult result, DrawFailReason failReason) {
+    public DrawEntry(String requestId, Long productId, Long userId, DrawResult result, DrawStatus status, DrawFailReason failReason) {
         this.requestId = requestId;
         this.productId = productId;
         this.userId = userId;
         this.result = result;
+        this.status = status;
         this.failReason = failReason;
     }
 
-    public static DrawEntry win(String requestId, Long productId, Long userId) {
-        return new DrawEntry(requestId, productId, userId, DrawResult.WIN, null);
+    public static DrawEntry pendingPayment(String requestId, Long productId, Long userId) {
+        return new DrawEntry(requestId, productId, userId, DrawResult.WIN, DrawStatus.PENDING_PAYMENT, null);
     }
 
     public static DrawEntry lose(String requestId, Long productId, Long userId, DrawFailReason failReason) {
-        return new DrawEntry(requestId, productId, userId, DrawResult.LOSE, failReason);
+        return new DrawEntry(requestId, productId, userId, DrawResult.LOSE, DrawStatus.FAILED, failReason);
     }
 
     public boolean hasSameDraw(Long productId, Long userId) {
         return this.productId.equals(productId) && this.userId.equals(userId);
+    }
+
+    public boolean isPendingPayment() {
+        return status == DrawStatus.PENDING_PAYMENT;
+    }
+
+    public void markPaymentSuccess() {
+        if (isPendingPayment()) {
+            status = DrawStatus.SUCCESS;
+        }
+    }
+
+    public void markPaymentFailed(DrawFailReason failReason) {
+        if (isPendingPayment()) {
+            status = DrawStatus.FAILED;
+            this.failReason = failReason;
+        }
     }
 }

@@ -1,6 +1,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Counter } from 'k6/metrics';
+import exec from 'k6/execution';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081';
 const PRODUCT_ID = Number(__ENV.PRODUCT_ID || '1');
@@ -14,6 +15,7 @@ const queuedCount = new Counter('draw_queued_count');
 const winCount = new Counter('draw_win_count');
 const loseCount = new Counter('draw_lose_count');
 const soldOutCount = new Counter('draw_sold_out_count');
+const paymentFailedCount = new Counter('draw_payment_failed_count');
 const alreadyEnteredCount = new Counter('draw_already_entered_count');
 const idempotencyConflictCount = new Counter('draw_idempotency_conflict_count');
 const lockTimeoutCount = new Counter('draw_lock_timeout_count');
@@ -46,8 +48,8 @@ export const options = {
 export default function () {
   touchAllCounters();
 
-  const requestId = `draw-${__VU}-${__ITER}-${Date.now()}`;
-  const userId = (__VU * 1_000_000) + __ITER;
+  const userId = exec.scenario.iterationInTest + 1;
+  const requestId = `draw-${userId}-${Date.now()}`;
   const payload = JSON.stringify({
     requestId,
     productId: PRODUCT_ID,
@@ -71,6 +73,7 @@ function touchAllCounters() {
   winCount.add(0);
   loseCount.add(0);
   soldOutCount.add(0);
+  paymentFailedCount.add(0);
   alreadyEnteredCount.add(0);
   idempotencyConflictCount.add(0);
   lockTimeoutCount.add(0);
@@ -109,6 +112,11 @@ function recordDrawResult(response, requestId, userId) {
       return;
     }
 
+    if (status === 'FAILED' && failReason === 'PAYMENT_FAILED') {
+      paymentFailedCount.add(1);
+      return;
+    }
+
     if (result === 'WIN') {
       winCount.add(1);
       return;
@@ -139,6 +147,8 @@ function recordHttpStatus(response) {
 function recordLoseReason(failReason, requestId, userId) {
   if (failReason === 'SOLD_OUT') {
     soldOutCount.add(1);
+  } else if (failReason === 'PAYMENT_FAILED') {
+    paymentFailedCount.add(1);
   } else if (failReason === 'ALREADY_ENTERED') {
     alreadyEnteredCount.add(1);
   } else {
