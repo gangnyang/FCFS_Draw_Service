@@ -1,11 +1,9 @@
 package com.fcfsdraw.draw.entry.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 public record DrawRequest(
-        @NotBlank(message = "요청 ID는 필수입니다.")
         String requestId,
 
         @NotNull(message = "상품 ID는 필수입니다.")

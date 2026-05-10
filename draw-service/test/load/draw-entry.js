@@ -4,9 +4,13 @@ import { Counter } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081';
 const PRODUCT_ID = Number(__ENV.PRODUCT_ID || '1');
+const DRAW_PATH = __ENV.DRAW_PATH || '/api/v1/draws';
+const TOTAL_REQUESTS = Number(__ENV.TOTAL_REQUESTS || '1000');
+const DURATION_SECONDS = Number(__ENV.DURATION_SECONDS || '3');
 const LOG_REJECTIONS = (__ENV.LOG_REJECTIONS || 'false').toLowerCase() === 'true';
 const LOG_FAILURES = (__ENV.LOG_FAILURES || 'false').toLowerCase() === 'true';
 
+const queuedCount = new Counter('draw_queued_count');
 const winCount = new Counter('draw_win_count');
 const loseCount = new Counter('draw_lose_count');
 const soldOutCount = new Counter('draw_sold_out_count');
@@ -24,11 +28,13 @@ const unexpectedErrorCount = new Counter('draw_unexpected_error_count');
 
 export const options = {
   scenarios: {
-    draw_once: {
-      executor: 'per-vu-iterations',
-      vus: Number(__ENV.VUS || '2000'),
-      iterations: 1,
-      maxDuration: '60s',
+    draw_ramped_entry: {
+      executor: 'constant-arrival-rate',
+      rate: Math.ceil(TOTAL_REQUESTS / DURATION_SECONDS),
+      timeUnit: '1s',
+      duration: `${DURATION_SECONDS}s`,
+      preAllocatedVUs: Number(__ENV.VUS || '1000'),
+      maxVUs: Number(__ENV.MAX_VUS || '3000'),
     },
   },
   thresholds: {
@@ -41,14 +47,14 @@ export default function () {
   touchAllCounters();
 
   const requestId = `draw-${__VU}-${__ITER}-${Date.now()}`;
-  const userId = Number(`${__VU}${__ITER}`);
+  const userId = (__VU * 1_000_000) + __ITER;
   const payload = JSON.stringify({
     requestId,
     productId: PRODUCT_ID,
     userId,
   });
 
-  const response = http.post(`${BASE_URL}/api/v1/draws`, payload, jsonHeaders(requestId));
+  const response = http.post(`${BASE_URL}${DRAW_PATH}`, payload, jsonHeaders(requestId));
 
   // HTTP 성공률은 통신 관점이고, WIN/LOSE는 아래 커스텀 카운터에서 따로 집계한다.
   check(response, {
@@ -61,6 +67,7 @@ export default function () {
 }
 
 function touchAllCounters() {
+  queuedCount.add(0);
   winCount.add(0);
   loseCount.add(0);
   soldOutCount.add(0);
@@ -95,6 +102,12 @@ function recordDrawResult(response, requestId, userId) {
 
     const result = body.data?.result;
     const failReason = body.data?.failReason;
+    const status = body.data?.status;
+
+    if (response.status === 202 && status === 'WAITING') {
+      queuedCount.add(1);
+      return;
+    }
 
     if (result === 'WIN') {
       winCount.add(1);

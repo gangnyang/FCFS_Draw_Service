@@ -78,7 +78,6 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
-            ConcurrencyFailureException.class,
             RedisConnectionException.class,
             RedisTimeoutException.class,
             CannotAcquireLockException.class,

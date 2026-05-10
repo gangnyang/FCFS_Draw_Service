@@ -1,18 +1,23 @@
 # ⚡ Concurrency & Transaction Guide
 
-이 문서는 대규모 선착순 트래픽 환경에서 데이터 정합성(재고, 잔액)을 보장하기 위한 정책을 정의합니다. 현재 프로젝트가 어느 단계(Step)에 있는지 확인하고, 해당 단계의 룰을 엄격히 따릅니다.
+이 문서는 대규모 선착순 트래픽 환경에서 데이터 정합성(재고, 잔액)을 보장하기 위한 정책을 정의합니다.
 
-## 🚧 현재 진행 단계: Step 3 (Redisson 분산 락 및 Fail-Fast 적용)
-- **목표:** Step 2의 비관적 락으로 인해 발생한 DB 병목 및 타임아웃 문제를 해결한다. 무거운 MySQL 락을 가벼운 Redis 분산 락으로 교체하고, '빠른 실패(Fail-Fast)'를 통해 서버 스레드를 방어한다.
-- **적용 규칙:**
-  1. **[JPA 락 제거]** `ProductRepository` 등에 걸려있던 JPA `@Lock(LockModeType.PESSIMISTIC_WRITE)` 및 `@QueryHints`를 모두 제거하고 순수 조회로 되돌린다.
-  2. **[Redisson Facade 패턴]** 비즈니스 로직(Service) 바깥에 분산 락을 제어하는 Facade 클래스(또는 AOP)를 분리한다. (반드시 **Lock 획득 👉 트랜잭션 시작 👉 로직 실행 👉 트랜잭션 커밋 👉 Lock 해제** 순서가 보장되어야 한다.)
-  3. **[Fail-Fast 설정]** `tryLock(waitTime, leaseTime, TimeUnit)` 사용 시, `waitTime`을 **0.1초 (100ms)** 내외로 아주 짧게 설정하여 유저가 길게 대기하지 않도록 한다.
-  4. **[예외 처리]** Lock 획득 실패 시 (대기 시간 초과 시) 즉시 예외(예: `ConcurrencyFailureException`)를 던지고, `@RestControllerAdvice`에서 "현재 접속자가 많아 처리가 지연되고 있습니다."라는 메시지(CommonResponse FAIL)로 부드럽게 응답한다.
+## 🚧 현재 진행 단계: Step 4 (Redis 비동기 대기열 구축)
+- **목표:** Step 3(분산 락)의 Fail-Fast로 인한 '무한 재시도(광클)' 및 '서버 입구 컷(Connection Refused)' 문제를 해결한다. Redis의 `Sorted Set (ZSET)`을 활용하여 유저를 대기열에 세우고, 백그라운드 워커가 순차적으로 처리하는 비동기 아키텍처를 구현한다.
+- **아키텍처 적용 규칙:**
+  1. **[기존 락 제거]** Step 3에서 작성한 `DrawEntryFacade` 로직을 걷어내고, 컨트롤러가 비즈니스 로직(DB 접근)을 직접 호출하지 못하게 차단한다.
+  2. **[대기열 진입 - Producer]**
+     - 유저가 선착순 요청을 하면 DB로 가지 않고 Redis `ZSET`에 유저 정보를 적재한다.
+     - Key: `draw:queue:{productId}`
+     - Value: `userId` (또는 requestId)
+     - Score: `System.currentTimeMillis()` (진입 시간 기준 오름차순 정렬)
+     - 진입 직후 클라이언트에게 `202 Accepted` 상태 코드와 함께 대기열 진입 성공 응답을 보낸다.
+  3. **[백그라운드 처리 - Consumer]**
+     - Spring `@Scheduled`를 사용하여 1초마다 동작하는 Worker를 만든다.
+     - Worker는 Redis ZSET에서 상위 N명(예: 100명)을 꺼내어(pop) 기존 `drawEntryService.draw()` (DB 재고 차감) 로직을 순차적으로 실행한다.
+  4. **[상태 조회 API]**
+     - 클라이언트가 자신의 대기 순번을 확인할 수 있도록 Redis `ZRANK` 명령어를 활용한 상태 조회 API(`GET /draw/status`)를 제공한다.
 
-## 🔄 트랜잭션 및 롤백 정책 (Transaction & Rollback)
-- 재고 차감과 잔액 차감 로직은 여전히 하나의 `@Transactional` 안에서 원자적(Atomic)으로 묶여야 한다. (Facade 클래스가 아닌 내부 Service 클래스에 트랜잭션 적용)
-- 실패/예외 발생 시 롤백되어 데이터가 원래 상태로 복구되는 흐름을 유지한다.
-
-## 🗺️ 향후 도입 예정 기술 (참고용 - 지금 구현하지 말 것)
-- Step 4: Redis Lua Script 기반 비동기 대기열 구축 (대규모 트래픽 UX 개선용)
+## 🔄 트랜잭션 및 정합성 정책
+- 대규모 트래픽(수천 명)은 Redis 메모리에서 모두 흡수하므로 DB 병목은 사라진다.
+- DB 접근은 오직 스케줄러(Worker) 1명만 통제된 속도(초당 N건)로 수행하므로, 별도의 분산 락(Redisson) 없이도 안전하게 처리 가능하다. (트랜잭션 범위는 Service 계층 유지)

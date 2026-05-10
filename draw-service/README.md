@@ -14,5 +14,5 @@
 
 ## 현재 동시성 단계
 
-concurrency-guide의 Step 3에 맞춰 상품 단위 Redisson 분산 락을 사용합니다.
-요청은 `product:{productId}` 락을 짧게 시도하고, 락 획득에 실패하면 빠르게 지연 응답을 반환합니다.
+concurrency-guide의 Step 4에 맞춰 Redis ZSET 기반 비동기 대기열을 사용합니다.
+요청은 즉시 Redis 대기열에 적재되고, 백그라운드 워커가 1초마다 상위 요청을 꺼내 DB 재고 차감 로직을 실행합니다.

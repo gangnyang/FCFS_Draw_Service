@@ -8,6 +8,9 @@ spring:
     hibernate:
       ddl-auto: create-drop
     open-in-view: false
+  task:
+    scheduling:
+      enabled: false
 
 logging:
   charset:
@@ -15,5 +18,8 @@ logging:
     file: UTF-8
 
 draw:
+  queue:
+    worker:
+      enabled: false
   redis:
     address: redis://localhost:6379
