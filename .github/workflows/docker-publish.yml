@@ -7,6 +7,9 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || vars.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -16,12 +19,9 @@ jobs:
         run: sed -i 's/\r$//' gradlew && chmod +x gradlew
 
       - name: Validate Docker Hub secrets
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           if [ -z "$DOCKERHUB_USERNAME" ]; then
-            echo "DOCKERHUB_USERNAME secret is empty or unavailable."
+            echo "DOCKERHUB_USERNAME is empty. Set it as a repository secret or repository variable."
             exit 1
           fi
           if [ -z "$DOCKERHUB_TOKEN" ]; then
@@ -33,8 +33,8 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
 
       - name: Build and push payment-service
         uses: docker/build-push-action@v6
@@ -42,7 +42,7 @@ jobs:
           context: .
           file: payment-service/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/fcfs-payment-service:latest
+          tags: ${{ env.DOCKERHUB_USERNAME }}/fcfs-payment-service:latest
 
       - name: Build and push draw-service
         uses: docker/build-push-action@v6
@@ -50,4 +50,4 @@ jobs:
           context: .
           file: draw-service/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/fcfs-draw-service:latest
+          tags: ${{ env.DOCKERHUB_USERNAME }}/fcfs-draw-service:latest
