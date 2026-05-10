@@ -1,0 +1,38 @@
+name: Docker Publish
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Normalize Gradle wrapper line endings
+        run: sed -i 's/\r$//' gradlew && chmod +x gradlew
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push payment-service
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: payment-service/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/fcfs-payment-service:latest
+
+      - name: Build and push draw-service
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: draw-service/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/fcfs-draw-service:latest

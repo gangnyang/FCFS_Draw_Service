@@ -1,10 +1,13 @@
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /workspace
 
+COPY . .
+RUN ./gradlew :payment-service:bootJar
+
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-ARG JAR_FILE=build/libs/*.jar
-COPY ${JAR_FILE} app.jar
+COPY --from=builder /workspace/payment-service/build/libs/*.jar app.jar
 
 EXPOSE 8080
-
 ENTRYPOINT ["java", "-jar", "app.jar"]
