@@ -17,6 +17,20 @@ spring:
 server:
   port: 8081
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
 logging:
   charset:
     console: UTF-8
@@ -27,3 +41,5 @@ draw:
     address: ${REDIS_ADDRESS:redis://localhost:6379}
   payment:
     base-url: ${PAYMENT_BASE_URL:http://localhost:8080}
+  metrics:
+    refresh-delay-ms: 5000

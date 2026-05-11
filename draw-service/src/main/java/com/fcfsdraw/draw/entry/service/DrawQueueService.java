@@ -52,6 +52,10 @@ public class DrawQueueService {
                 .toList();
     }
 
+    public int queueSize(Long productId) {
+        return queue(productId).size();
+    }
+
     private RScoredSortedSet<String> queue(Long productId) {
         return redissonClient.getScoredSortedSet(QUEUE_KEY_PREFIX + productId);
     }
